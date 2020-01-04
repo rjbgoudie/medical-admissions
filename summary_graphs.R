@@ -1,16 +1,27 @@
-source("common.R")
-
 # Output is created relative to this working directory
-setwd("H:/problem_list")
+setwd("\\\\cuh_nas120/eau/mseu/Shared/reports/medical-admissions/")
 
+# Subdirectory in which the daily staff reports will be placed,
+# with each day within a folder with date format YYYY-MM-DD
+output_folder_name <- "summary_graphs"
+
+source("functions.R")
+
+# load ALL the CSV files, so we have all the history
+# only keep some of the columns
 simple_data <- load_simple_data(load_all_files = TRUE)
 
+# Reshape the data, so that each indicator has a separate row
+# for each admission - the "indicator" column records the name
+# of the indicator that that row corresponds to; and the
+# "value" column contains its value
 simple_data_long <- simple_data %>%
-  gather("indicator",
-         "value",
+  gather(key = "indicator",
+         value = "value",
          -filename,
          -date,
          -Age,
+         -Patient_gender,
          -Patient_DOB,
          -Patient_MRN,
          -Treatment_team_active,
@@ -19,24 +30,14 @@ simple_data_long <- simple_data %>%
          -Treatment_team_jobtitle,
          -Summary)
 
-# WHY ARE THERE NAs in value???? To look at
+# calculates the proportion of 1s in "value" for each date and indicator
 simple_data_perday <- simple_data_long %>%
   group_by(date, indicator) %>%
-  summarise(proportion = mean(value, na.rm = TRUE))
+  summarise(proportion = mean(value))
 
-pdf("bigdata.pdf", height = 10/cm(1), width = 15/cm(1))
-ggplot(simple_data_long, aes(x = date, y = value, colour = indicator)) + 
-  stat_summary(fun.y = "mean", geom = "line") +
-  scale_y_continuous(labels = scales::percent, limits = c(0,1)) +
-  labs(title = "",
-       x = "Date",
-       y = "Percentage completed",
-       colour = "",
-       caption = "")+
-  theme_bw()
-graphics.off()
-
-pdf("data_overview.pdf", height = 20/cm(1), width = 30/cm(1))
+pdf(file = file.path(output_folder_name, "indicators_graph.pdf"),
+    height = 20/cm(1),
+    width = 30/cm(1))
 ggplot(simple_data_perday, aes(x = date, y = proportion, colour = indicator)) +
   geom_smooth(span = 0.25, se = FALSE) + 
   geom_vline(xintercept = as.POSIXct("2019-08-07 00:00:00",
