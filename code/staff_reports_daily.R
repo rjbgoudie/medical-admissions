@@ -1,15 +1,20 @@
+csv_directory <- "\\\\cuh_nas120/eau/mseu/Shared/morning_report"
+analysis_directory <- "\\\\cuh_nas120/eau/mseu/Shared/reports/medical-admissions/"
+
 # Output is created relative to this working directory
-setwd("\\\\cuh_nas120/eau/mseu/Shared/reports/medical-admissions/")
+setwd(analysis_directory)
+
+# load various shared functions
+source("code/functions.R")
 
 # Subdirectory in which the daily staff reports will be placed,
 # with each day within a folder with date format YYYY-MM-DD
-output_folder_name <- "daily_staff_reports"
+output_folder_name <- "staff_reports_daily"
 
 minimum_admissions_for_report <- 4
 
-source("functions.R")
-
-simple_data <- load_simple_data(load_all_files = FALSE)
+filepaths_to_load <- filepaths_most_recent(csv_directory = csv_directory)
+simple_data <- load_simple_data(filepaths_to_load)
 
 # Most recent date
 #most_recent_date <- as.POSIXct("2019-11-21")
@@ -50,4 +55,5 @@ if (dir.exists(directory)){
 
 void <- sapply(staff_most_recent_date,
        create_report_for_staff_member,
+       x = simple_data_staff_most_recent_date,
        directory = directory)

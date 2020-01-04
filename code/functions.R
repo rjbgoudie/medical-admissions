@@ -3,6 +3,54 @@ library(tidyverse)
 library(grid)
 library(gridExtra)
 
+# filepaths
+
+filepaths_base <- function(csv_directory){
+  # has to be recursive since old csv files are filed in subdirectories
+  filepaths_to_load <- list.files(path = csv_directory,
+                                  pattern="*1.csv",
+                                  recursive = TRUE)
+  
+  # exclude files in the "MR audit FT" folder
+  is_in_unwanted_folder <- str_detect(filepaths_to_load, "^MR audit FT/")
+  filepaths_to_load[!is_in_unwanted_folder]
+}
+
+filepaths_all <- function(csv_directory){
+  filepaths_to_load <- filepaths_base(csv_directory)
+  paste0(csv_directory, filepaths_to_load)
+}
+
+filepaths_most_recent <- function(csv_directory){
+  filepaths_to_load <- filepaths_base(csv_directory)
+  filepaths_to_load <- filepaths_filter_most_recent(filepaths_to_load)
+  paste0(csv_directory, filepaths_to_load)
+}
+
+filepaths_from_month <- function(csv_directory, date_in_month){
+  filepaths_to_load <- filepaths_base(csv_directory)
+  filepaths_to_load <- filepaths_filter_within_month(filepaths_to_load,
+                                                     date_in_month)
+  paste0(csv_directory, filepaths_to_load)
+}
+
+# filtering filepaths
+
+filepaths_filter_most_recent <- function(x){
+  file_dates <- extract_date_from_filepath(x)
+  is_most_recent <- sort(file_dates, decreasing = TRUE)[1] == file_dates
+  x[is_most_recent]
+}
+
+filepaths_filter_within_month <- function(x, date_in_month){
+  file_dates <- extract_date_from_filepath(x)
+  start_date <- floor_date(date_in_month, unit = "month")
+  end_date <- ceiling_date(date_in_month, unit = "month")
+  is_within_month <- file_dates >= start_date & file_dates < end_date
+  x[is_within_month]
+}
+
+
 setClass("slashseparateddob")
 setAs("character",
       "slashseparateddob",
@@ -156,29 +204,11 @@ read_morning_report_csv <- function(file){
   as_tibble(x[, columns_to_keep])
 }
 
-most_recent_filepath <- function(x){
-  file_dates <- extract_date_from_filepath(x)
-  is_most_recent <- sort(file_dates, decreasing = TRUE)[1] == file_dates
-  x[is_most_recent]
-}
-
-load_simple_data <- function(load_all_files,
-                             csv_directory = "Z:/"){
-  # has to be recursive since old csv files are filed in subdirectories
-  filepaths_to_load <- list.files(path = csv_directory,
-                                  pattern="*1.csv",
-                                  recursive = TRUE)
-  
-  # exclude files in the "MR audit FT" folder
-  is_in_unwanted_folder <- str_detect(filepaths_to_load, "^MR audit FT/")
-  filepaths_to_load <- filepaths_to_load[!is_in_unwanted_folder]
-  
-  if (!load_all_files){
-    filepaths_to_load <- most_recent_filepath(filepaths_to_load)
-  }
-  
-  filepaths_to_load <- paste0(csv_directory, filepaths_to_load)
-  
+#' Load (potentially several) morning report csv files
+#' 
+#' @param filepaths_to_load A character vector of filepaths to morning report
+#' csv files
+load_simple_data <- function(filepaths_to_load){
   list_csv <- lapply(filepaths_to_load, read_morning_report_csv)
   
   simple_data <- bind_rows(list_csv)
@@ -208,9 +238,9 @@ load_simple_data <- function(load_all_files,
     select(-Frailty, -ECG)
 }
 
-create_report_for_staff_member <- function(person,
+create_report_for_staff_member <- function(x, person,
                                            directory){
-  display_table <- simple_data_staff_most_recent_date %>%
+  display_table <- x %>%
     filter(Treatment_team == person) %>%
     select(Patient_MRN,
            Age,
@@ -281,7 +311,7 @@ create_report_for_staff_member <- function(person,
     bg_params = list(fill=c(rep(c("white"),
                                 length.out=n_minus_1), "white"))))
   
-  role <- (simple_data_staff_most_recent_date %>%
+  role <- (x %>%
              filter(Treatment_team == person) %>%
              pull(Treatment_team_jobtitle))[1]
   

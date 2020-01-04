@@ -1,15 +1,20 @@
+csv_directory <- "\\\\cuh_nas120/eau/mseu/Shared/morning_report"
+analysis_directory <- "\\\\cuh_nas120/eau/mseu/Shared/reports/medical-admissions/"
+
 # Output is created relative to this working directory
-setwd("\\\\cuh_nas120/eau/mseu/Shared/reports/medical-admissions/")
+setwd(analysis_directory)
+
+# load various shared functions
+source("code/functions.R")
 
 # Subdirectory in which the daily staff reports will be placed,
 # with each day within a folder with date format YYYY-MM-DD
 output_folder_name <- "summary_graphs"
 
-source("functions.R")
-
 # load ALL the CSV files, so we have all the history
 # only keep some of the columns
-simple_data <- load_simple_data(load_all_files = TRUE)
+filepaths_to_load <- filepaths_all(csv_directory = csv_directory)
+simple_data <- load_simple_data(filepaths_to_load)
 
 # Reshape the data, so that each indicator has a separate row
 # for each admission - the "indicator" column records the name
