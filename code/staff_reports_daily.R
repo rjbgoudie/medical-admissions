@@ -1,5 +1,5 @@
-csv_directory <- "\\\\cuh_nas120/eau/mseu/Shared/morning_report"
-analysis_directory <- "\\\\cuh_nas120/eau/mseu/Shared/reports/medical-admissions/"
+csv_directory <- "//cuh_nas120/eau/mseu/Shared/morning_report/"
+analysis_directory <- "//cuh_nas120/eau/mseu/Shared/reports/medical-admissions/"
 
 # Output is created relative to this working directory
 setwd(analysis_directory)
@@ -14,13 +14,13 @@ output_folder_name <- "staff_reports_daily"
 minimum_admissions_for_report <- 4
 
 filepaths_to_load <- filepaths_most_recent(csv_directory = csv_directory)
-simple_data <- load_simple_data(filepaths_to_load)
+mr_data <- load_mr_data(filepaths_to_load)
 
 # Most recent date
 #most_recent_date <- as.POSIXct("2019-11-21")
-most_recent_date <- sort(simple_data$date, decreasing = TRUE)[1]
+most_recent_date <- sort(mr_data$date, decreasing = TRUE)[1]
 
-simple_data_staff <- simple_data %>%
+mr_data_staff <- mr_data %>%
   mutate(id = row_number()) %>%
   gather(key = "key",
          value = "value",
@@ -37,23 +37,24 @@ simple_data_staff <- simple_data %>%
            c("Core Trainee", "Foundation Trainee", "ST3+", "Clinical Fellow", 
              "GP Trainee")) %>%
   distinct
-  # distinct needed as if doctor named twice in treatment team
-  # this creates a duplication
+# distinct needed as if doctor named twice in treatment team
+# this creates a duplication
 
-simple_data_staff_most_recent_date <- simple_data_staff %>%
+mr_data_staff_most_recent_date <- mr_data_staff %>%
   filter(date == most_recent_date)
 
-staff_most_recent_date <- unique(simple_data_staff_most_recent_date$Treatment_team)
+staff_most_recent_date <- unique(mr_data_staff_most_recent_date$Treatment_team)
 
-directory <- file.path(output_folder_name, as.character(most_recent_date))
+output_folder_name_date <-
+  file.path(output_folder_name, as.character(most_recent_date))
 
-if (dir.exists(directory)){
+if (dir.exists(output_folder_name_date)){
   warning("Note directory for output already exists")
 } else {
-  dir.create(directory, recursive = TRUE)
+  dir.create(output_folder_name_date, recursive = TRUE)
 }
 
 void <- sapply(staff_most_recent_date,
-       create_report_for_staff_member,
-       x = simple_data_staff_most_recent_date,
-       directory = directory)
+               FUN = staff_report_table_pdf,
+               x = mr_data_staff_most_recent_date,
+               output_directory = output_folder_name_date)

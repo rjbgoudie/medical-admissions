@@ -3,7 +3,11 @@ library(tidyverse)
 library(grid)
 library(gridExtra)
 
-# filepaths
+################################################################################
+# filepath functions
+################################################################################
+
+# basic
 
 filepaths_base <- function(csv_directory){
   # has to be recursive since old csv files are filed in subdirectories
@@ -50,13 +54,9 @@ filepaths_filter_within_month <- function(x, date_in_month){
   x[is_within_month]
 }
 
-
-setClass("slashseparateddob")
-setAs("character",
-      "slashseparateddob",
-      function(from){
-        as.POSIXct(from, format = "%d/%m/%Y")
-      })
+################################################################################
+# Extract data from strings
+################################################################################
 
 extract_gender_from_patient_name <- function(x){
   # Assumes the format "DUCK, Donald M (96 y.o. F)"
@@ -65,280 +65,237 @@ extract_gender_from_patient_name <- function(x){
 }
 
 extract_date_from_filepath <- function(filename){
-  as.POSIXct(strptime(basename(filename), "%Y%m%d"))
+  as.Date(strptime(basename(filename), "%Y%m%d"))
 }
 
-read_morning_report_csv <- function(file){
-  colClasses <- c("MRN" = "character",
-                  "DOB" = "slashseparateddob",
-                  "VTE.Assessment.Done." = "character",
-                  "UFTO.order.placed.." = "character",
-                  "Active.Treatment.Team" = "character",
-                  "Active.Treatment.Team.Relationships" = "character",          
-                  "Treatment.Team" = "character",                                
-                  "Treatment.Team.Relationship" = "character",
-                  "Admission.Medication.Reconciliation.Complete." = "character",
-                  "FRAILTY.complete" = "character",
-                  "ECG." = "character",
-                  "Prob.List.Updated." = "character",
-                  "Allergy.Review.Status" = "character")
+################################################################################
+# Loading morning report csv files
+################################################################################
+
+load_mr_data_single <- function(file){
+  mr_data <- read_csv(file = file,
+                      col_types = cols(DOB = col_date("%d/%m/%Y"),
+                                       "Prob List Updated?" = col_integer(),
+                                       .default = col_character()))
   
   file_date <- extract_date_from_filepath(file)
+
+  # On 21st October 2018, the trailing space from UFTO column is not present
+  # if (file_date == as.Date("2018-10-21")){
+  #   mr_data <- mr_data %>%
+  #     rename("UFTO order placed?" = "UFTO order placed? ")
+  # }
   
-  # On 21st Oct 2018, there is an extra trailing space in "UFTO order placed  "
-  # column name
-  if (file_date == as.POSIXct("2018-10-21")){
-    is_ufto <- names(colClasses) == "UFTO.order.placed.."
-    names(colClasses)[is_ufto] <- "UFTO.order.placed."
+  # On 27th Nov 2019, the column name changed to "VTE Assessment done?"
+  # (ie "done" became lowercase)
+  if (file_date < as.Date("2019-11-27")){
+    mr_data <- mr_data %>%
+      rename("VTE Assessment done?" = "VTE Assessment Done?")
   }
   
-  # On 27th Nov 2019, the column name changed to "VTE.Assessment.done."
-  if (file_date >= as.POSIXct("2019-11-27")){
-    is_vte <- names(colClasses) == "VTE.Assessment.Done."
-    names(colClasses)[is_vte] <- "VTE.Assessment.done."
-  }
-  
-  x <- read.csv(file = file,
-                colClasses = colClasses,
-                stringsAsFactors = FALSE)
-  
-  if (file_date == as.POSIXct("2018-10-21")){
-    is_ufto <- names(x) == "UFTO.order.placed."
-    colnames(x)[is_ufto] <- "UFTO.order.placed.."
-  }
-  
-  # On 27th Nov 2019, the column name changed to "VTE.Assessment.done."
-  if (file_date >= as.POSIXct("2019-11-27")){
-    is_vte <- names(x) == "VTE.Assessment.done."
-    names(x)[is_vte] <- "VTE.Assessment.Done."
-  }
-  
-  # Rename columns
-  x <- x %>%
-    rename(Patient_name = "Patient.Name",
+  mr_data <- mr_data %>%
+    select(Patient_name = "Patient Name", # for extracting gender - remove after
            Patient_MRN = "MRN",
            Patient_DOB = "DOB",
-           Ward_room = "Ward.and.Room",
-           VTE = "VTE.Assessment.Done.",
-           ReSPECT = "UFTO.order.placed..",
-           Treatment_team_active = "Active.Treatment.Team",
-           Treatment_team_active_jobtitle = "Active.Treatment.Team.Relationships",
-           Treatment_team = "Treatment.Team",
-           Treatment_team_jobtitle = "Treatment.Team.Relationship",
-           Date_admission_decision = "Decision.to.Admit.Time",
-           Medications_reconciliation = "Admission.Medication.Reconciliation.Complete.",
-           Frailty = "FRAILTY.complete",
-           Consultant_lead = "Lead.Consultant",
-           Date_arrival = "Arrival.date.and.time",
-           Decision_maker_first = "First.Decision.Maker",
-           Senior_review_start = "Senior.Review.Start",
-           Time_departure = "Departure.time",
-           ECG = "ECG.",
-           Problem_list = "Prob.List.Updated.",
-           PTA_meds_reviewed = "PTA.Meds.Rwd.",
-           Allergies = "Allergy.Review.Status",
-           Drug_allergies = "Allergies",
-           Problem_list_text = "Problem.List",
-           Handover = "Handover",
-           Summary = "Summary...all.services",
-           pochgb = "POCHGB",
-           pocmcv = "POCMCV",
-           pocwbc = "POCWBC",
-           pocplt = "POCPLT",
-           inr = "INR",
-           pocddimer = "POCDDIMER",
-           pocna = "POCNA",
-           pock = "POCK",
-           pocurea = "POCUREA",
-           poccre = "POCCRE",
-           pocalb = "POCALB",
-           poctbil = "POCTBIL",
-           pocalt = "POCALT",
-           pocalp = "POCALP",
-           pocica = "POCICA",
-           pocglubg = "POCGLUBG",
-           poccrp = "POCCRP",
-           pocamylase = "POCAMYLASE",
-           poctini = "POCTINI",
-           poctrop = "POCTROP",
-           pocph = "POCPH",
-           pocbe = "POCBE",
-           poclacbg = "POCLACBG")
+           Treatment_team_active = "Active Treatment Team",
+           Treatment_team_active_jobtitle = "Active Treatment Team Relationships",
+           Treatment_team = "Treatment Team",
+           Treatment_team_jobtitle = "Treatment Team Relationship",
+           VTE = "VTE Assessment done?",
+           ReSPECT = "UFTO order placed?",
+           Medications_reconciliation = "Admission Medication Reconciliation Complete?",
+           Problem_list = "Prob List Updated?",
+           Allergies = "Allergy Review Status",
+           Summary = "Summary - all services")
   
-  # Create Patient_gender, filename, and date columns
-  x <- x %>%
+  mr_data <- mr_data %>%
     mutate(Patient_gender = extract_gender_from_patient_name(Patient_name),
            filename = basename(file),
-           date = extract_date_from_filepath(file))
+           date = extract_date_from_filepath(file),
+           Age = floor(time_length(date - Patient_DOB, unit = "year"))) %>%
+    select(-Patient_name)
   
   # Check for unexpected values in gender column
-  if (any(!x$Patient_gender %in% c("M", "F", "U"))){
-    stop("Unexpected Patient gender data")
+  if (any(!mr_data$Patient_gender %in% c("M", "F", "U"))){
+    stop(file_date, ": Unexpected Patient gender data")
   }
   
-  # delete column that only appears in half the files
-  if ("Disch.Date.Time" %in% colnames(x)){
-    x$Disch.Date.Time <- NULL
+  if (any(!is.na(mr_data$VTE) & mr_data$VTE != "Yes")){
+    stop(file_date, ": Unexpected VTE data")
   }
   
-  x$Problem_list <- as.numeric(as.character(x$Problem_list))
-  x$ECG <- as.numeric(as.character(x$ECG))
+  if (any(!is.na(mr_data$ReSPECT) & mr_data$ReSPECT != "Has UFTO order")){
+    stop(file_date, ": Unexpected ReSPECT data")
+  }
   
-  columns_to_keep <- c("filename",
-                       "date",
-                       "Patient_gender",
-                       "Patient_DOB",
-                       "Patient_MRN",
-                       "Treatment_team_active",
-                       "Treatment_team_active_jobtitle",
-                       "Treatment_team",                                
-                       "Treatment_team_jobtitle",
-                       "VTE",
-                       "ReSPECT",
-                       "Medications_reconciliation",
-                       "Frailty",
-                       "ECG",
-                       "Problem_list",
-                       "Allergies",
-                       "Summary")
-  as_tibble(x[, columns_to_keep])
+  if (any(!is.na(mr_data$Medications_reconciliation) &
+          !mr_data$Medications_reconciliation %in% c("Partially",
+                                                     "No",
+                                                     "Yes"))){
+    stop(file_date, ": Unexpected Medications_reconciliation data")
+  }
+  
+  if (any(!is.na(mr_data$Allergies) &
+          !mr_data$Allergies %in% c("Reviewed", "Unable to Assess"))){
+    stop(file_date, ": Unexpected Allergies data")
+  }
+  
+  if (any(!mr_data$Problem_list %in% c(0, 1))){
+    stop(file_date, ": Unexpected Problem_list data")
+  }
+  
+  # Recode to 1s and 0s
+  mr_data %>%
+    mutate(VTE = if_else(VTE == "Yes",
+                         true = 1,
+                         false = 0,
+                         missing = 0),
+           ReSPECT = if_else(ReSPECT == "Has UFTO order",
+                             true = 1,
+                             false = 0,
+                             missing = 0),
+           Medications_reconciliation =
+             if_else(Medications_reconciliation == "Yes" |
+                       Medications_reconciliation == "Partially",
+                     true = 1,
+                     false = 0,
+                     missing = 0),
+           Allergies = if_else(Allergies == "Reviewed",
+                               true = 1,
+                               false = 0,
+                               missing = 0))
 }
 
 #' Load (potentially several) morning report csv files
 #' 
+#' Each separate file is joined together to form a tall data frame 
+#' containing all the data
+#' 
 #' @param filepaths_to_load A character vector of filepaths to morning report
 #' csv files
-load_simple_data <- function(filepaths_to_load){
-  list_csv <- lapply(filepaths_to_load, read_morning_report_csv)
-  
-  simple_data <- bind_rows(list_csv)
-  
-  # Recode the data to 1s and 0s
-  simple_data <- simple_data %>% 
-    mutate(Age = floor(as.numeric(as.duration(date - Patient_DOB),
-                                  units = "years")),
-           VTE = if_else(VTE == "Yes",
-                         true = 1, 
-                         false = 0),
-           ReSPECT = if_else(ReSPECT == "Has UFTO order",
-                             true = 1,
-                             false = 0),
-           Frailty = case_when(Frailty == "Yes" ~ 1L, 
-                               Frailty == "No" ~ 0L,
-                               Frailty == "N/A" ~ NA_integer_),
-           Allergies = if_else(Allergies == "Reviewed",
-                               true = 1,
-                               false = 0),
-           Medications_reconciliation = if_else(Medications_reconciliation == "No",
-                                                true = 0,
-                                                false = 1))
-  
-  # Delete the Frailty and ECG columns, since not interested in these
-  simple_data %>%
-    select(-Frailty, -ECG)
+load_mr_data <- function(filepaths_to_load){
+  mr_data_list <- lapply(filepaths_to_load, load_mr_data_single)
+  bind_rows(mr_data_list)
 }
 
-create_report_for_staff_member <- function(x, person,
-                                           directory){
+################################################################################
+# Generate PDF report
+################################################################################
+
+staff_report_table_pdf <- function(x,
+                                   person,
+                                   output_directory){
+  # extract records for this person
   display_table <- x %>%
     filter(Treatment_team == person) %>%
-    select(Patient_MRN,
-           Age,
-           Patient_gender,
-           Summary,
-           VTE,
-           ReSPECT,
-           Medications_reconciliation,
-           Problem_list,
-           Allergies) %>%
-    rename(MRN = Patient_MRN,
+    select(MRN = Patient_MRN,
+           Age = Age,
            Gender = Patient_gender,
-           Meds_Rec = Medications_reconciliation) %>%
+           Summary = Summary,
+           VTE = VTE,
+           ReSPECT = ReSPECT,
+           Meds_Rec = Medications_reconciliation,
+           Problem_list = Problem_list,
+           Allergies = Allergies) %>%
     rowwise %>%
     mutate(Summary = sapply(strwrap(Summary, width = 80, simplify = FALSE),
                             paste, collapse = "\n"))
   
-  display_table_summary <- display_table %>%
-    ungroup %>%
-    summarise_at(c("VTE",
-                   "ReSPECT",
-                   "Meds_Rec",
-                   "Problem_list",
-                   "Allergies"),
-                 ~ paste0(round(mean(., na.rm = TRUE), 2) * 100, "%"))
-  
-  display_table_char <- display_table %>%
-    mutate_all(as.character) %>%
-    mutate_at(c("VTE",
-                "ReSPECT",
-                "Meds_Rec",
-                "Problem_list",
-                "Allergies"),
-              ~ case_when(. == "1" ~ "Yes",
-                          . == "0" ~ "No",
-                          TRUE ~ "?"))
-  
-  display_table_all <- bind_rows(display_table_char, display_table_summary)
-  
-  # DELETE Problem_list column for now
-  # Also note Problem_list mutate_at in colour_char has been commented out
-  display_table_all <- display_table_all %>%
-    select(-Problem_list)
-  
-  colour_char <- display_table_all %>%
-    mutate_all(as.character) %>%
-    mutate_at(c("VTE",
-                "ReSPECT",
-                "Meds_Rec",
-                ###### "Problem_list", #######
-                "Allergies"),
-              ~ case_when(. == "Yes" ~ "green3",
-                          . == "No" ~ "red",
-                          TRUE ~ "black")) %>%
-    mutate_at(c("MRN", "Gender", "Age", "Summary"),
-              ~ "black") %>%
-    unlist
-  
-  n_minus_1 <- nrow(display_table_all) - 1
-  
-  t1 <- ttheme_default(core=list(
-    fg_params=list(fontface=c(rep("plain", n_minus_1), "bold"),
-                   col = colour_char,
-                   hjust = 0,
-                   x = 0.01,
-                   vjust = 1,
-                   y = 0.99),
-    bg_params = list(fill=c(rep(c("white"),
-                                length.out=n_minus_1), "white"))))
-  
-  role <- (x %>%
-             filter(Treatment_team == person) %>%
-             pull(Treatment_team_jobtitle))[1]
-  
-  if (nrow(display_table) >= minimum_admissions_for_report){
-    g <- tableGrob(display_table_all, rows=NULL, theme = t1)
+  if (nrow(display_table) < minimum_admissions_for_report){
+    cat(person, "skipped; only", nrow(display_table), "admission(s)\n")
+  } else {
+    # calculate %s for last row of table
+    display_table_percents <- display_table %>%
+      ungroup %>%
+      summarise_at(c("VTE",
+                     "ReSPECT",
+                     "Meds_Rec",
+                     "Problem_list",
+                     "Allergies"),
+                   ~ paste0(round(mean(., na.rm = TRUE), 2) * 100, "%"))
     
+    # convert 1s and 0s to Yes and No
+    display_table_char <- display_table %>%
+      mutate_all(as.character) %>%
+      mutate_at(c("VTE",
+                  "ReSPECT",
+                  "Meds_Rec",
+                  "Problem_list",
+                  "Allergies"),
+                ~ case_when(. == "1" ~ "Yes",
+                            . == "0" ~ "No",
+                            TRUE ~ "?"))
+
+    # Join both together
+    display_table_full <- bind_rows(display_table_char, display_table_percents)
+    
+    # DELETE Problem_list column for now
+    # Also note Problem_list mutate_at in text_colours has been commented out
+    display_table_full <- display_table_full %>%
+      select(-Problem_list)
+
+    # create a character vector with the text colour of each column of
+    # display_table_full in turn
+    text_colours <- display_table_full %>%
+      mutate_all(as.character) %>%
+      mutate_at(c("VTE",
+                  "ReSPECT",
+                  "Meds_Rec",
+                  # "Problem_list",
+                  "Allergies"),
+                ~ case_when(. == "Yes" ~ "green3",
+                            . == "No" ~ "red",
+                            TRUE ~ "black")) %>%
+      mutate_at(c("MRN", "Gender", "Age", "Summary"),
+                ~ "black") %>%
+      unlist
+    
+    # standard fontface for all rows except the last row
+    tablegrob_theme <- ttheme_default(
+      core =
+        list(fg_params =
+               list(fontface = c(rep("plain", nrow(display_table_full) - 1),
+                                 "bold"),
+                    col = text_colours,
+                    hjust = 0,
+                    x = 0.01,
+                    vjust = 1,
+                    y = 0.99),
+             bg_params =
+               list(fill = c(rep(c("white"), nrow(display_table_full) - 1),
+                             "white"))))
+    
+    # generate graphical object ("grob") of the table
+    grob <- tableGrob(display_table_full,
+                      rows = NULL,
+                      theme = tablegrob_theme)
+    
+    
+    # calculate the height of the table
+    # need to count number of newlines in the summary, since this can be
+    # long sometimes
     n_newlines <- sum(sapply(display_table$Summary, function(x){
       str_count(x, "\n")
     }))
     lines <- n_newlines + nrow(display_table) + 3
     height <- max(20, ceiling(lines/1.25))
     
+    # Create heading of the table
+    jobtitle <- (x %>%
+                   filter(Treatment_team == person) %>%
+                   pull(Treatment_team_jobtitle))[1]
     date_char <- as.character(most_recent_date)
     date_prev_char <- as.character(most_recent_date - ddays(1))
-    
     heading <- paste0(person, "     ",
-                      role, "     ",
+                      jobtitle, "     ",
                       date_prev_char, " to ", date_char)
     
-    pdf(file = file.path(directory, paste0(person, ".pdf")),
+    # Output as PDF
+    pdf(file = file.path(output_directory, paste0(person, ".pdf")),
         width = 30/cm(1),
         height = height/cm(1))
-    grid.arrange(g,
-                 top = heading)
+    grid.arrange(grob, top = heading)
     graphics.off()
     cat(person, "done\n")
-  } else {
-    cat(person, "skipped; only", nrow(display_table), "admission(s)\n")
   }
 }
