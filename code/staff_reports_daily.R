@@ -11,6 +11,8 @@ source("code/functions.R")
 # with each day within a folder with date format YYYY-MM-DD
 output_folder_name <- "staff_reports_daily"
 
+# minimum number of admissions that a staff member has seen for a report to
+# be created (needs to be >= this)
 minimum_admissions_for_report <- 4
 
 filepaths_to_load <- filepaths_most_recent(csv_directory = csv_directory)
@@ -18,7 +20,7 @@ mr_data <- load_mr_data(filepaths_to_load)
 
 # Create a data frame in which each row corresponds to one Doctor's interaction
 # with one patient admission
-mr_data_staff <- staff_mr_table(mr_data)
+mr_data_staff <- reshape_mr_table_staff(mr_data)
 
 # Most recent date
 #most_recent_date <- as.POSIXct("2019-11-21")
@@ -41,8 +43,10 @@ if (dir.exists(output_folder_name_date)){
   dir.create(output_folder_name_date, recursive = TRUE)
 }
 
-# for each staff_most_recent_date, call staff_report_table_pdf function 
+# for each staff name in staff_most_recent_date, call
+# staff_report_table_pdf function, with person set to each staff name in turn
 void <- sapply(staff_most_recent_date,
                FUN = staff_report_table_pdf,
                x = mr_data_staff_most_recent_date,
-               output_directory = output_folder_name_date)
+               output_directory = output_folder_name_date,
+               minimum_admissions_for_report = minimum_admissions_for_report)

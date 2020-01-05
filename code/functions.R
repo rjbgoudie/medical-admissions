@@ -239,7 +239,7 @@ load_mr_data <- function(filepaths_to_load){
 #' @param x A morning report data frame
 #' @return A data frame in which each row corresponds to one Doctor's
 #' interaction with one patient admission
-staff_mr_table <- function(x){
+reshape_mr_table_staff <- function(x){
   x %>%
     mutate(id = row_number()) %>%
     gather(key = "key",
@@ -263,14 +263,17 @@ staff_mr_table <- function(x){
 
 #' Generate PDF report of performance indicators for person
 #' 
+#' @param person A character vector containing a staff members name
 #' @param x data frame containing one row for each staff member for each patient
 #' admission (ie of the form of mr_data_staff)
-#' @param person A character vector containing a staff members name
 #' @param output_directory A character string, specficying the path to the 
 #' directory where the PDF will be created
-staff_report_table_pdf <- function(x,
-                                   person,
-                                   output_directory){
+#' @param minimum_admissions_for_report A numeric (of length 1) specifying
+#' threshold for creating a report
+staff_report_table_pdf <- function(person,
+                                   x,
+                                   output_directory,
+                                   minimum_admissions_for_report){
   # extract records for this person
   display_table <- x %>%
     filter(Treatment_team == person) %>%
@@ -298,7 +301,7 @@ staff_report_table_pdf <- function(x,
                      "Meds_Rec",
                      "Problem_list",
                      "Allergies"),
-                   ~ paste0(round(mean(., na.rm = TRUE), 2) * 100, "%"))
+                   ~ paste0(round(mean(.), 2) * 100, "%"))
     
     # convert 1s and 0s to Yes and No
     display_table_char <- display_table %>%
@@ -355,7 +358,6 @@ staff_report_table_pdf <- function(x,
     grob <- tableGrob(display_table_full,
                       rows = NULL,
                       theme = tablegrob_theme)
-    
     
     # calculate the height of the table
     # need to count number of newlines in the summary, since this can be

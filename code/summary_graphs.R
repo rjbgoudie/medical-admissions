@@ -39,6 +39,8 @@ mr_data_perday <- mr_data_long %>%
   group_by(date, indicator) %>%
   summarise(proportion = mean(value))
 
+# graph without raw data (only shows smoothed curve)
+
 pdf(file = file.path(output_folder_name, "indicators_graph.pdf"),
     height = 20/cm(1),
     width = 30/cm(1))
@@ -77,6 +79,7 @@ ggplot(mr_data_perday, aes(x = date, y = proportion, colour = indicator)) +
            vjust = "bottom")
 graphics.off()
 
+# graph with both raw data and smoothed curve
 
 pdf(file = file.path(output_folder_name, "indicators_graph_unsmoothed.pdf"),
     height = 20/cm(1),

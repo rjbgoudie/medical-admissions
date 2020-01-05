@@ -11,6 +11,8 @@ source("code/functions.R")
 # with each month within a folder with date format YYYY-MM
 output_folder_name <- "staff_reports_monthly"
 
+# minimum number of admissions that a staff member has seen for them to be
+# included in the table (needs to be >= this)
 minimum_admissions_for_report <- 5
 
 # This should be any date within the month of interest
@@ -18,7 +20,7 @@ date_in_month <- as.Date("2019-11-01")
 
 filepaths_to_load <- filepaths_from_month(csv_directory = csv_directory,
                                           date_in_month = date_in_month)
-mr_data <- load_mr_data(filepaths_to_load)
+mr_data <- reshape_mr_table_staff(filepaths_to_load)
 
 # Create a data frame in which each row corresponds to one Doctor's interaction
 # with one patient admission
@@ -32,15 +34,20 @@ if (dir.exists(directory)){
   dir.create(directory, recursive = TRUE)
 }
 
+# create table of number of patients seen by each staff member
 mr_data_staff_npatients <-  mr_data_staff %>%
   group_by(Treatment_team) %>%
   summarise(n_patients = n())
 
+# create character vector of the names of staff who saw enough patients
 mr_data_staff_npatients_exceed_minimum <- mr_data_staff_npatients %>%
   filter(n_patients >= minimum_admissions_for_report) %>%
   pull(Treatment_team)
 
-# some of this is copied from daily - can we avoid repeat
+# filter to staff who saw enough patients,
+# then select and rename desired columns,
+# then summarise and then merge with data on the number of patients seen
+# finally create overall performance measure, and sort the rows by this
 mr_data_staff_percents <- mr_data_staff %>%
   group_by(Treatment_team) %>%
   filter(Treatment_team %in% mr_data_staff_npatients_exceed_minimum) %>%
