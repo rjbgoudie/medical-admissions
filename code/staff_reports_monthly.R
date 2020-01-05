@@ -20,25 +20,9 @@ filepaths_to_load <- filepaths_from_month(csv_directory = csv_directory,
                                           date_in_month = date_in_month)
 mr_data <- load_mr_data(filepaths_to_load)
 
-mr_data_staff <- mr_data %>%
-  mutate(id = row_number()) %>%
-  gather(key = "key",
-         value = "value",
-         Treatment_team_active,
-         Treatment_team_active_jobtitle,
-         Treatment_team,
-         Treatment_team_jobtitle) %>%
-  separate_rows(value, sep = "\n") %>%
-  group_by(key) %>%
-  mutate(temp_id = row_number()) %>%
-  spread(key, value) %>%
-  select(-temp_id) %>%
-  filter(Treatment_team_jobtitle %in%
-           c("Core Trainee", "Foundation Trainee", "ST3+", "Clinical Fellow", 
-             "GP Trainee")) %>%
-  distinct
-# distinct needed as if doctor named twice in treatment team
-# this creates a duplication
+# Create a data frame in which each row corresponds to one Doctor's interaction
+# with one patient admission
+mr_data_staff <- staff_mr_table(mr_data)
 
 directory <- file.path(output_folder_name, format(date_in_month, "%Y-%m"))
 

@@ -16,35 +16,22 @@ minimum_admissions_for_report <- 4
 filepaths_to_load <- filepaths_most_recent(csv_directory = csv_directory)
 mr_data <- load_mr_data(filepaths_to_load)
 
+# Create a data frame in which each row corresponds to one Doctor's interaction
+# with one patient admission
+mr_data_staff <- staff_mr_table(mr_data)
+
 # Most recent date
 #most_recent_date <- as.POSIXct("2019-11-21")
 most_recent_date <- sort(mr_data$date, decreasing = TRUE)[1]
 
-mr_data_staff <- mr_data %>%
-  mutate(id = row_number()) %>%
-  gather(key = "key",
-         value = "value",
-         Treatment_team_active,
-         Treatment_team_active_jobtitle,
-         Treatment_team,
-         Treatment_team_jobtitle) %>%
-  separate_rows(value, sep = "\n") %>%
-  group_by(key) %>%
-  mutate(temp_id = row_number()) %>%
-  spread(key, value) %>%
-  select(-temp_id) %>%
-  filter(Treatment_team_jobtitle %in%
-           c("Core Trainee", "Foundation Trainee", "ST3+", "Clinical Fellow", 
-             "GP Trainee")) %>%
-  distinct
-# distinct needed as if doctor named twice in treatment team
-# this creates a duplication
-
+# filter to only most_recent_date
 mr_data_staff_most_recent_date <- mr_data_staff %>%
   filter(date == most_recent_date)
 
+# identify all staff working on most_recent_date
 staff_most_recent_date <- unique(mr_data_staff_most_recent_date$Treatment_team)
 
+# form path to output folder and check if it exists
 output_folder_name_date <-
   file.path(output_folder_name, as.character(most_recent_date))
 
@@ -54,6 +41,7 @@ if (dir.exists(output_folder_name_date)){
   dir.create(output_folder_name_date, recursive = TRUE)
 }
 
+# for each staff_most_recent_date, call staff_report_table_pdf function 
 void <- sapply(staff_most_recent_date,
                FUN = staff_report_table_pdf,
                x = mr_data_staff_most_recent_date,

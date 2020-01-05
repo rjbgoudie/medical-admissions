@@ -7,10 +7,16 @@ library(gridExtra)
 # filepath functions
 ################################################################################
 
-# basic
-
+#' Get character vector of filepaths
+#' 
+#' Looks for all files ending in "1.csv", but NOT in "MR audit folder"
+#' 
+#' @param csv_directory path to base directory to look for csv files in
+#' @return A character vector of filepaths to the CSV files, relative to
+#' csv_directory
 filepaths_base <- function(csv_directory){
   # has to be recursive since old csv files are filed in subdirectories
+  # only looking admitted patients (1.csv)
   filepaths_to_load <- list.files(path = csv_directory,
                                   pattern="*1.csv",
                                   recursive = TRUE)
@@ -20,17 +26,30 @@ filepaths_base <- function(csv_directory){
   filepaths_to_load[!is_in_unwanted_folder]
 }
 
+#' Get character vector of all CSV files
+#' 
+#' @param csv_directory path to base directory to look for csv files in
+#' @return A character vector of full filepaths to the CSV files
 filepaths_all <- function(csv_directory){
   filepaths_to_load <- filepaths_base(csv_directory)
   paste0(csv_directory, filepaths_to_load)
 }
 
+#' Get path to most recent CSV file
+#'  
+#' @param csv_directory path to base directory to look for csv files in
+#' @return A character vector (of length 1) with a full filepath to the CSV file
 filepaths_most_recent <- function(csv_directory){
   filepaths_to_load <- filepaths_base(csv_directory)
   filepaths_to_load <- filepaths_filter_most_recent(filepaths_to_load)
   paste0(csv_directory, filepaths_to_load)
 }
 
+#' Get paths of all CSV files within specified month
+#'
+#' @param csv_directory path to base directory to look for csv files in
+#' @param date_in_month A Date. Any date within the month can be supplied
+#' @return A character vector of full filepaths to the CSV files
 filepaths_from_month <- function(csv_directory, date_in_month){
   filepaths_to_load <- filepaths_base(csv_directory)
   filepaths_to_load <- filepaths_filter_within_month(filepaths_to_load,
@@ -40,12 +59,21 @@ filepaths_from_month <- function(csv_directory, date_in_month){
 
 # filtering filepaths
 
+#' Extract most recent filepath
+#' 
+#' @param x A character vector of filepaths
+#' @return A chararcter vector (of length 1) of the most recent filepath
 filepaths_filter_most_recent <- function(x){
   file_dates <- extract_date_from_filepath(x)
   is_most_recent <- sort(file_dates, decreasing = TRUE)[1] == file_dates
   x[is_most_recent]
 }
 
+#' Extract all filepaths from the specified month
+#' 
+#' @param x A character vector of filepaths
+#' @param date_in_month A Date. Any date within the month can be supplied
+#' @return A chararcter vector of the filepaths within the specified month
 filepaths_filter_within_month <- function(x, date_in_month){
   file_dates <- extract_date_from_filepath(x)
   start_date <- floor_date(date_in_month, unit = "month")
@@ -58,12 +86,23 @@ filepaths_filter_within_month <- function(x, date_in_month){
 # Extract data from strings
 ################################################################################
 
+#' Extract gender from patient name string
+#' 
+#' Assumes the format "DUCK, Donald M (96 y.o. F)" and simply extracts the
+#' second last letter
+#' 
+#' @param x character vector of patient names
+#' @return a character vector of patient genders (either "M" or "F" or "U")
 extract_gender_from_patient_name <- function(x){
-  # Assumes the format "DUCK, Donald M (96 y.o. F)"
-  # and simply extracts the second last letter
   str_sub(x, -2, -2) 
 }
 
+#' Extract the date from a filepath
+#' 
+#' Extracts the date in format YYYYMMDD
+#' 
+#' @param filename A filename or filepath
+#' @return A Date object, containing the date of the supplied filename
 extract_date_from_filepath <- function(filename){
   as.Date(strptime(basename(filename), "%Y%m%d"))
 }
@@ -72,6 +111,11 @@ extract_date_from_filepath <- function(filename){
 # Loading morning report csv files
 ################################################################################
 
+#' Load a single morning report csv file
+#' 
+#' @param file Path to csv file to load
+#' @return A data frame containing the relevant columns of the csv file, 
+#' recoded to 1s and 0s as appropriate
 load_mr_data_single <- function(file){
   mr_data <- read_csv(file = file,
                       col_types = cols(DOB = col_date("%d/%m/%Y"),
@@ -80,6 +124,7 @@ load_mr_data_single <- function(file){
   
   file_date <- extract_date_from_filepath(file)
 
+  # THis doesn't seem to be required at the moment
   # On 21st October 2018, the trailing space from UFTO column is not present
   # if (file_date == as.Date("2018-10-21")){
   #   mr_data <- mr_data %>%
@@ -93,12 +138,11 @@ load_mr_data_single <- function(file){
       rename("VTE Assessment done?" = "VTE Assessment Done?")
   }
   
+  #Pull out relevant columns (on right) and rename (on left)
   mr_data <- mr_data %>%
     select(Patient_name = "Patient Name", # for extracting gender - remove after
            Patient_MRN = "MRN",
            Patient_DOB = "DOB",
-           Treatment_team_active = "Active Treatment Team",
-           Treatment_team_active_jobtitle = "Active Treatment Team Relationships",
            Treatment_team = "Treatment Team",
            Treatment_team_jobtitle = "Treatment Team Relationship",
            VTE = "VTE Assessment done?",
@@ -108,6 +152,7 @@ load_mr_data_single <- function(file){
            Allergies = "Allergy Review Status",
            Summary = "Summary - all services")
   
+  #Add extra columns and remove patient name from data
   mr_data <- mr_data %>%
     mutate(Patient_gender = extract_gender_from_patient_name(Patient_name),
            filename = basename(file),
@@ -115,7 +160,8 @@ load_mr_data_single <- function(file){
            Age = floor(time_length(date - Patient_DOB, unit = "year"))) %>%
     select(-Patient_name)
   
-  # Check for unexpected values in gender column
+  # Check for unexpected values in each column in turn. Return error message if
+  #unexpected value
   if (any(!mr_data$Patient_gender %in% c("M", "F", "U"))){
     stop(file_date, ": Unexpected Patient gender data")
   }
@@ -144,7 +190,7 @@ load_mr_data_single <- function(file){
     stop(file_date, ": Unexpected Problem_list data")
   }
   
-  # Recode to 1s and 0s
+  # Recode character results to 1s and 0s
   mr_data %>%
     mutate(VTE = if_else(VTE == "Yes",
                          true = 1,
@@ -173,15 +219,55 @@ load_mr_data_single <- function(file){
 #' 
 #' @param filepaths_to_load A character vector of filepaths to morning report
 #' csv files
+#' @return A single data frame containing all the csv files stacked together
 load_mr_data <- function(filepaths_to_load){
   mr_data_list <- lapply(filepaths_to_load, load_mr_data_single)
   bind_rows(mr_data_list)
+}
+
+
+#' Create table summarising each Doctor's involvement in morning report
+#' 
+#' Split the "Treament_team" columns at the newline indicator (\n)
+#' so that each admission (each row) is repeated for each team member.
+#' 
+#' Then filter to only Doctors
+#'
+#' distinct needed since sometimes doctors are named twice in the Treatment_team
+#' and this creates a duplication
+#' 
+#' @param x A morning report data frame
+#' @return A data frame in which each row corresponds to one Doctor's
+#' interaction with one patient admission
+staff_mr_table <- function(x){
+  x %>%
+    mutate(id = row_number()) %>%
+    gather(key = "key",
+           value = "value",
+           Treatment_team,
+           Treatment_team_jobtitle) %>%
+    separate_rows(value, sep = "\n") %>%
+    group_by(key) %>%
+    mutate(temp_id = row_number()) %>%
+    spread(key, value) %>%
+    select(-temp_id) %>%
+    filter(Treatment_team_jobtitle %in%
+             c("Core Trainee", "Foundation Trainee", "ST3+", "Clinical Fellow", 
+               "GP Trainee")) %>%
+    distinct
 }
 
 ################################################################################
 # Generate PDF report
 ################################################################################
 
+#' Generate PDF report of performance indicators for person
+#' 
+#' @param x data frame containing one row for each staff member for each patient
+#' admission (ie of the form of mr_data_staff)
+#' @param person A character vector containing a staff members name
+#' @param output_directory A character string, specficying the path to the 
+#' directory where the PDF will be created
 staff_report_table_pdf <- function(x,
                                    person,
                                    output_directory){
