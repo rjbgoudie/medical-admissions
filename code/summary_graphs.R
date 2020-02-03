@@ -1,3 +1,6 @@
+# 2020-01-05 Basic working version
+# Robert Goudie/Sarah Cowan
+
 csv_directory <- "//cuh_nas120/eau/mseu/Shared/morning_report/"
 analysis_directory <- "//cuh_nas120/eau/mseu/Shared/reports/medical-admissions/"
 
