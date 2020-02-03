@@ -1,4 +1,5 @@
 # 2020-01-05 Basic working version
+# 2020-02-03 Add footer with caveats
 # Robert Goudie/Sarah Cowan
 
 csv_directory <- "//cuh_nas120/eau/mseu/Shared/morning_report/"

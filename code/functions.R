@@ -1,4 +1,5 @@
 # 2020-01-05 Basic working version
+# 2020-02-03 Add footer with caveats
 # Robert Goudie/Sarah Cowan
 
 # to install all the packages required use the following command:
@@ -384,12 +385,18 @@ staff_report_table_pdf <- function(person,
     heading <- paste0(person, "     ",
                       jobtitle, "     ",
                       date_prev_char, " to ", date_char)
-    
+
+    # Create footer of the table
+    footer1 <- "Only admitted patients appear in this summary"
+    footer2 <- "Medications Reconciliation will appear as \"no\" if the patient is still in ED at 08:00"
+    footer3 <- "Not all patients will need ReSPECT completing. We anticipate that on average this should be over 50%"
+    footer <- paste(c(footer1, footer2, footer3), collapse = "\n")
+
     # Output as PDF
     pdf(file = file.path(output_directory, paste0(person, ".pdf")),
         width = 30/cm(1),
         height = height/cm(1))
-    grid.arrange(grob, top = heading)
+    grid.arrange(grob, top = heading, bottom = footer)
     graphics.off()
     cat(person, "done\n")
   }
