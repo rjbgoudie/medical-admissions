@@ -1,3 +1,7 @@
+# to install all the packages required use the following command:
+#
+# install.packages(c("lubridate", "tidyverse", "gridExtra"), repos = "https://cloud.r-project.org", dependencies = TRUE)
+
 library(lubridate)
 library(tidyverse)
 library(grid)
