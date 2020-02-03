@@ -1,1 +1,1 @@
-cmd /k "C:\Program Files\R\R-3.4.0\bin\Rscript.exe" \\cuh_nas120\eau\mseu\Shared\reports\medical-admissions\code\staff_reports_daily.R
+cmd /k C:\"Program Files"\R\R-3.6.2\bin\Rscript.exe \\cuh_nas120\eau\mseu\Shared\reports\medical-admissions\code\staff_reports_daily.R
