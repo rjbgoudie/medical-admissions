@@ -16,18 +16,18 @@ output_folder_name <- "staff_reports_monthly"
 
 # minimum number of admissions that a staff member has seen for them to be
 # included in the table (needs to be >= this)
-minimum_admissions_for_report <- 5
+minimum_admissions_for_report <- 10
 
 # This should be any date within the month of interest
-date_in_month <- as.Date("2019-11-01")
+date_in_month <- as.Date("2020-01-01")
 
 filepaths_to_load <- filepaths_from_month(csv_directory = csv_directory,
                                           date_in_month = date_in_month)
-mr_data <- reshape_mr_table_staff(filepaths_to_load)
+mr_data <- load_mr_data(filepaths_to_load)
 
 # Create a data frame in which each row corresponds to one Doctor's interaction
 # with one patient admission
-mr_data_staff <- staff_mr_table(mr_data)
+mr_data_staff <- reshape_mr_table_staff(mr_data)
 
 directory <- file.path(output_folder_name, format(date_in_month, "%Y-%m"))
 
@@ -70,6 +70,10 @@ mr_data_staff_percents <- mr_data_staff %>%
                  "Allergies"),
                ~ round(mean(., na.rm = TRUE), 2) * 100) %>%
   left_join(mr_data_staff_npatients) %>%
-  mutate(performance = (VTE + Meds_Rec)/2) %>%
+  mutate(performance = VTE) %>%
   arrange(desc(performance)) %>%
   print(n = Inf)
+
+write.csv(mr_data_staff_percents,
+          row.names = FALSE,
+          file = file.path(directory, "table_vte.csv"))
