@@ -213,7 +213,7 @@ load_mr_data_single <- function(file){
                        Medications_reconciliation == "Partially",
                      true = 1,
                      false = 0,
-                     missing = 0),
+                     missing = NA_real_),
            Allergies = if_else(Allergies == "Reviewed",
                                true = 1,
                                false = 0,
@@ -302,6 +302,7 @@ staff_report_table_pdf <- function(person,
     cat(person, "skipped; only", nrow(display_table), "admission(s)\n")
   } else {
     # calculate %s for last row of table
+    # Note - NAs are deleted before %s are calculated
     display_table_percents <- display_table %>%
       ungroup %>%
       summarise_at(c("VTE",
@@ -309,7 +310,7 @@ staff_report_table_pdf <- function(person,
                      "Meds_Rec",
                      "Problem_list",
                      "Allergies"),
-                   ~ paste0(round(mean(.), 2) * 100, "%"))
+                   ~ paste0(round(mean(., na.rm = TRUE), 2) * 100, "%"))
     
     # convert 1s and 0s to Yes and No
     display_table_char <- display_table %>%
@@ -321,6 +322,7 @@ staff_report_table_pdf <- function(person,
                   "Allergies"),
                 ~ case_when(. == "1" ~ "Yes",
                             . == "0" ~ "No",
+                            is.na(.) ~ "N/A",
                             TRUE ~ "?"))
 
     # Join both together
@@ -342,6 +344,7 @@ staff_report_table_pdf <- function(person,
                   "Allergies"),
                 ~ case_when(. == "Yes" ~ "green3",
                             . == "No" ~ "red",
+                            . == "N/A" ~ "darkgray",
                             TRUE ~ "black")) %>%
       mutate_at(c("MRN", "Gender", "Age", "Summary"),
                 ~ "black") %>%
@@ -388,7 +391,7 @@ staff_report_table_pdf <- function(person,
 
     # Create footer of the table
     footer1 <- "Only admitted patients appear in this summary"
-    footer2 <- "Medications Reconciliation will appear as \"no\" if the patient is still in ED at 08:00"
+    footer2 <- "Medications Reconciliation will appear as N/A if the patient is still in ED at 08:00"
     footer3 <- "Not all patients will need ReSPECT completing. We anticipate that on average this should be over 50%"
     footer <- paste(c(footer1, footer2, footer3), collapse = "\n")
 
