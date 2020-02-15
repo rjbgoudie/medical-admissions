@@ -38,9 +38,10 @@ mr_data_long <- mr_data %>%
          -Summary)
 
 # calculates the proportion of 1s in "value" for each date and indicator
+# Note that NAs are deleted from the data before calculating proportions
 mr_data_perday <- mr_data_long %>%
   group_by(date, indicator) %>%
-  summarise(proportion = mean(value))
+  summarise(proportion = mean(value, na.rm = TRUE))
 
 # graph without raw data (only shows smoothed curve)
 
