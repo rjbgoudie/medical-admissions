@@ -310,8 +310,12 @@ staff_report_table_pdf <- function(person,
                      "Meds_Rec",
                      "Problem_list",
                      "Allergies"),
-                   ~ paste0(round(mean(., na.rm = TRUE), 2) * 100, "%"))
-    
+                   ~ paste0(round(mean(., na.rm = TRUE), 2) * 100, "%")) %>%
+      mutate(MRN = "",
+             Gender = "",
+             Age = "",
+             Summary = "")
+
     # convert 1s and 0s to Yes and No
     display_table_char <- display_table %>%
       mutate_all(as.character) %>%
