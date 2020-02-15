@@ -79,6 +79,13 @@ ggplot(mr_data_perday, aes(x = date, y = proportion, colour = indicator)) +
            y = 0.9, 
            label = "Foundation changeover",
            angle = 90,
+           vjust = "bottom") +
+  geom_vline(xintercept = as.Date("2020-02-03")) +
+  annotate("text",
+           x = as.Date("2020-01-31"),
+           y = 0.9,
+           label = "Individual feedback commenced",
+           angle = 90,
            vjust = "bottom")
 graphics.off()
 
@@ -119,6 +126,13 @@ ggplot(mr_data_perday, aes(x = date, y = proportion, colour = indicator)) +
            x = as.Date("2019-12-01"),
            y = 0.9,
            label = "Foundation changeover",
+           angle = 90,
+           vjust = "bottom") +
+  geom_vline(xintercept = as.Date("2020-02-03")) +
+  annotate("text",
+           x = as.Date("2020-01-31"),
+           y = 0.9,
+           label = "Individual feedback commenced",
            angle = 90,
            vjust = "bottom")
 graphics.off()
