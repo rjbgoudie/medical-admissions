@@ -50,7 +50,10 @@ pdf(file = file.path(output_folder_name, "indicators_graph.pdf"),
     width = 30/cm(1))
 ggplot(mr_data_perday, aes(x = date, y = proportion, colour = indicator)) +
   geom_smooth(span = 0.25, se = FALSE, method = "loess") +
-  scale_y_continuous(labels = scales::percent, limits = c(0,1)) +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,1),
+                     breaks = seq(from = 0, to = 1, by = 0.2),
+                     expand = c(0, 0)) +
   scale_x_date(limits = c(as.Date("2019-07-01"),
                           as.Date("2020-09-01")),
                date_minor_breaks ="months") +
@@ -98,7 +101,10 @@ pdf(file = file.path(output_folder_name, "indicators_graph_unsmoothed.pdf"),
 ggplot(mr_data_perday, aes(x = date, y = proportion, colour = indicator)) +
   geom_point(alpha = 0.5) +
   geom_smooth(span = 0.25, se = FALSE, method = "loess") +
-  scale_y_continuous(labels = scales::percent, limits = c(0,1)) +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,1),
+                     breaks = seq(from = 0, to = 1, by = 0.2),
+                     expand = c(0, 0)) +
   scale_x_date(limits = c(as.Date("2019-07-01"),
                           as.Date("2020-09-01")),
                date_minor_breaks ="months") +
