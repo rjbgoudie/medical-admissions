@@ -278,10 +278,12 @@ reshape_mr_table_staff <- function(x){
 #' directory where the PDF will be created
 #' @param minimum_admissions_for_report A numeric (of length 1) specifying
 #' threshold for creating a report
+#' @param verbose Print progress to console
 staff_report_table_pdf <- function(person,
                                    x,
                                    output_directory,
-                                   minimum_admissions_for_report){
+                                   minimum_admissions_for_report,
+                                   verbose = TRUE){
   # extract records for this person
   display_table <- x %>%
     filter(Treatment_team == person) %>%
@@ -299,7 +301,9 @@ staff_report_table_pdf <- function(person,
                             paste, collapse = "\n"))
   
   if (nrow(display_table) < minimum_admissions_for_report){
-    cat(person, "skipped; only", nrow(display_table), "admission(s)\n")
+    if (verbose){
+      cat(person, "skipped; only", nrow(display_table), "admission(s)\n")
+    }
   } else {
     # calculate %s for last row of table
     # Note - NAs are deleted before %s are calculated
@@ -405,6 +409,8 @@ staff_report_table_pdf <- function(person,
         height = height/cm(1))
     grid.arrange(grob, top = heading, bottom = footer)
     graphics.off()
-    cat(person, "done\n")
+    if (verbose){
+      cat(person, "done\n")
+    }
   }
 }
