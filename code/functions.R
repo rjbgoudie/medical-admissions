@@ -1,5 +1,6 @@
 # 2020-01-05 Basic working version
 # 2020-02-03 Add footer with caveats
+# 2020-02-23 Load discharged data, and present this as well
 # Robert Goudie/Sarah Cowan
 
 # to install all the packages required use the following command:
@@ -20,13 +21,24 @@ library(gridExtra)
 #' Looks for all files ending in "1.csv", but NOT in "MR audit folder"
 #' 
 #' @param csv_directory path to base directory to look for csv files in
+#' @param type Either "admitted" or "discharged", specifying which file type
+#' to find
 #' @return A character vector of filepaths to the CSV files, relative to
 #' csv_directory
-filepaths_base <- function(csv_directory){
+filepaths_base <- function(csv_directory,
+                           type = "admitted"){
+  
+  if (type == "admitted"){
+    pattern <- "*1.csv"
+  } else if (type == "discharged"){
+    pattern <- "*2.csv"
+  } else {
+    stop("Unexpected type specified in filepaths_base()")
+  }
   # has to be recursive since old csv files are filed in subdirectories
   # only looking admitted patients (1.csv)
   filepaths_to_load <- list.files(path = csv_directory,
-                                  pattern="*1.csv",
+                                  pattern = pattern,
                                   recursive = TRUE)
   
   # exclude files in the "MR audit FT" folder
@@ -37,18 +49,24 @@ filepaths_base <- function(csv_directory){
 #' Get character vector of all CSV files
 #' 
 #' @param csv_directory path to base directory to look for csv files in
+#' @param type Either "admitted" or "discharged", specifying which file type
+#' to find
 #' @return A character vector of full filepaths to the CSV files
-filepaths_all <- function(csv_directory){
-  filepaths_to_load <- filepaths_base(csv_directory)
+filepaths_all <- function(csv_directory,
+                          type = "admitted"){
+  filepaths_to_load <- filepaths_base(csv_directory, type = type)
   paste0(csv_directory, filepaths_to_load)
 }
 
 #' Get path to most recent CSV file
 #'  
 #' @param csv_directory path to base directory to look for csv files in
+#' @param type Either "admitted" or "discharged", specifying which file type
+#' to find
 #' @return A character vector (of length 1) with a full filepath to the CSV file
-filepaths_most_recent <- function(csv_directory){
-  filepaths_to_load <- filepaths_base(csv_directory)
+filepaths_most_recent <- function(csv_directory,
+                                  type = "admitted"){
+  filepaths_to_load <- filepaths_base(csv_directory, type = type)
   filepaths_to_load <- filepaths_filter_most_recent(filepaths_to_load)
   paste0(csv_directory, filepaths_to_load)
 }
@@ -57,9 +75,13 @@ filepaths_most_recent <- function(csv_directory){
 #'
 #' @param csv_directory path to base directory to look for csv files in
 #' @param date_in_month A Date. Any date within the month can be supplied
+#' @param type Either "admitted" or "discharged", specifying which file type
+#' to find
 #' @return A character vector of full filepaths to the CSV files
-filepaths_from_month <- function(csv_directory, date_in_month){
-  filepaths_to_load <- filepaths_base(csv_directory)
+filepaths_from_month <- function(csv_directory,
+                                 date_in_month,
+                                 type = "admitted"){
+  filepaths_to_load <- filepaths_base(csv_directory, type = type)
   filepaths_to_load <- filepaths_filter_within_month(filepaths_to_load,
                                                      date_in_month)
   paste0(csv_directory, filepaths_to_load)
@@ -398,10 +420,9 @@ staff_report_table_pdf <- function(person,
                       date_prev_char, " to ", date_char)
 
     # Create footer of the table
-    footer1 <- "Only admitted patients appear in this summary"
-    footer2 <- "Medications Reconciliation will appear as N/A if the patient is still in ED at 08:00"
-    footer3 <- "Not all patients will need ReSPECT completing. We anticipate that on average this should be over 50%"
-    footer <- paste(c(footer1, footer2, footer3), collapse = "\n")
+    footer1 <- "Medications Reconciliation will appear as N/A if the patient is still in ED at 08:00"
+    footer2 <- "Not all patients will need ReSPECT completing. We anticipate that on average this should be over 50%"
+    footer <- paste(c(footer1, footer2), collapse = "\n")
 
     # Output as PDF
     pdf(file = file.path(output_directory, paste0(person, ".pdf")),

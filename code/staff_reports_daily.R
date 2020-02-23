@@ -1,5 +1,6 @@
 # 2020-01-05 Basic working version
 # 2020-02-03 Add footer with caveats
+# 2020-02-23 Load discharged data, and present this as well
 # Robert Goudie/Sarah Cowan
 
 csv_directory <- "//cuh_nas120/eau/mseu/Shared/morning_report/"
@@ -19,8 +20,25 @@ output_folder_name <- "staff_reports_daily"
 # be created (needs to be >= this)
 minimum_admissions_for_report <- 4
 
-filepaths_to_load <- filepaths_most_recent(csv_directory = csv_directory)
-mr_data <- load_mr_data(filepaths_to_load)
+filepaths_to_load <- filepaths_most_recent(csv_directory = csv_directory,
+                                           type = "admitted")
+mr_data_admitted <- load_mr_data(filepaths_to_load)
+
+filepaths_to_load <- filepaths_most_recent(csv_directory = csv_directory,
+                                           type = "discharged")
+mr_data_discharged <- load_mr_data(filepaths_to_load)
+
+mr_data_discharged <- mr_data_discharged %>%
+  mutate(VTE = NA,
+         ReSPECT = NA,
+         Medications_reconciliation = NA,
+         Allergies = NA,
+         Summary = "Discharged")
+
+# There may be overlap in Patient_MRNs betwen admitted and discharged
+# This is because a patient may be both admitted and discharged in a
+# single day
+mr_data <- bind_rows(mr_data_admitted, mr_data_discharged)
 
 # Create a data frame in which each row corresponds to one Doctor's interaction
 # with one patient admission
