@@ -1,6 +1,8 @@
 # 2020-01-05 Basic working version
 # 2020-02-03 Add footer with caveats
 # 2020-02-23 Load discharged data, and present this as well
+# 2020-03-08 Use both Problem_list columns from csv files, and add problem
+#            list to output
 # Robert Goudie/Sarah Cowan
 
 # to install all the packages required use the following command:
@@ -151,7 +153,7 @@ load_mr_data_single <- function(file){
                       col_types = cols(DOB = col_date("%d/%m/%Y"),
                                        "Prob List Updated?" = col_integer(),
                                        .default = col_character()))
-  
+
   file_date <- extract_date_from_filepath(file)
 
   # THis doesn't seem to be required at the moment
@@ -178,7 +180,8 @@ load_mr_data_single <- function(file){
            VTE = "VTE Assessment done?",
            ReSPECT = "UFTO order placed?",
            Medications_reconciliation = "Admission Medication Reconciliation Complete?",
-           Problem_list = "Prob List Updated?",
+           Problem_list_updated = "Prob List Updated?",
+           Problem_list_hospital = "Problem List",
            Allergies = "Allergy Review Status",
            Summary = "Summary - all services")
   
@@ -189,6 +192,27 @@ load_mr_data_single <- function(file){
            date = extract_date_from_filepath(file),
            Age = floor(time_length(date - Patient_DOB, unit = "year"))) %>%
     select(-Patient_name)
+  
+  # Coalesce the two Problem_list columns:
+  # Problem_list_hospital - text recorded in problem list (if it starts with
+  # "Hospital:" then it has been updated since admission)
+  # Problem_list_updated - spreadsheet column, but misses updates in ED
+  mr_data <- mr_data %>%
+    mutate(Problem_list_hospital = if_else(str_detect(Problem_list_hospital,
+                                                      "^Hospital:"),
+                                           true = TRUE,
+                                           false = FALSE,
+                                           missing = FALSE),
+           Problem_list_updated = if_else(Problem_list_updated == 1,
+                                          true = TRUE,
+                                          false = FALSE,
+                                          missing = FALSE),
+           Problem_list = if_else(Problem_list_hospital | Problem_list_updated,
+                                  true = 1,
+                                  false = 0,
+                                  missing = 0)) %>%
+    select(-Problem_list_updated,
+           -Problem_list_hospital)
   
   # Check for unexpected values in each column in turn. Return error message if
   #unexpected value
@@ -311,15 +335,15 @@ staff_report_table_pdf <- function(person,
     filter(Treatment_team == person) %>%
     select(MRN = Patient_MRN,
            Age = Age,
-           Gender = Patient_gender,
+           `M/F` = Patient_gender,
            Summary = Summary,
            VTE = VTE,
            ReSPECT = ReSPECT,
            Meds_Rec = Medications_reconciliation,
-           Problem_list = Problem_list,
+           Prob_list = Problem_list,
            Allergies = Allergies) %>%
     rowwise %>%
-    mutate(Summary = sapply(strwrap(Summary, width = 80, simplify = FALSE),
+    mutate(Summary = sapply(strwrap(Summary, width = 70, simplify = FALSE),
                             paste, collapse = "\n"))
   
   if (nrow(display_table) < minimum_admissions_for_report){
@@ -334,11 +358,11 @@ staff_report_table_pdf <- function(person,
       summarise_at(c("VTE",
                      "ReSPECT",
                      "Meds_Rec",
-                     "Problem_list",
+                     "Prob_list",
                      "Allergies"),
                    ~ paste0(round(mean(., na.rm = TRUE), 2) * 100, "%")) %>%
       mutate(MRN = "",
-             Gender = "",
+             `M/F` = "",
              Age = "",
              Summary = "")
 
@@ -348,7 +372,7 @@ staff_report_table_pdf <- function(person,
       mutate_at(c("VTE",
                   "ReSPECT",
                   "Meds_Rec",
-                  "Problem_list",
+                  "Prob_list",
                   "Allergies"),
                 ~ case_when(. == "1" ~ "Yes",
                             . == "0" ~ "No",
@@ -357,11 +381,6 @@ staff_report_table_pdf <- function(person,
 
     # Join both together
     display_table_full <- bind_rows(display_table_char, display_table_percents)
-    
-    # DELETE Problem_list column for now
-    # Also note Problem_list mutate_at in text_colours has been commented out
-    display_table_full <- display_table_full %>%
-      select(-Problem_list)
 
     # create a character vector with the text colour of each column of
     # display_table_full in turn
@@ -370,16 +389,16 @@ staff_report_table_pdf <- function(person,
       mutate_at(c("VTE",
                   "ReSPECT",
                   "Meds_Rec",
-                  # "Problem_list",
+                  "Prob_list",
                   "Allergies"),
                 ~ case_when(. == "Yes" ~ "green3",
                             . == "No" ~ "red",
                             . == "N/A" ~ "darkgray",
                             TRUE ~ "black")) %>%
-      mutate_at(c("MRN", "Gender", "Age", "Summary"),
+      mutate_at(c("MRN", "M/F", "Age", "Summary"),
                 ~ "black") %>%
       unlist
-    
+
     # standard fontface for all rows except the last row
     tablegrob_theme <- ttheme_default(
       core =
@@ -394,12 +413,12 @@ staff_report_table_pdf <- function(person,
              bg_params =
                list(fill = c(rep(c("white"), nrow(display_table_full) - 1),
                              "white"))))
-    
+
     # generate graphical object ("grob") of the table
     grob <- tableGrob(display_table_full,
                       rows = NULL,
                       theme = tablegrob_theme)
-    
+
     # calculate the height of the table
     # need to count number of newlines in the summary, since this can be
     # long sometimes
@@ -408,7 +427,7 @@ staff_report_table_pdf <- function(person,
     }))
     lines <- n_newlines + nrow(display_table) + 3
     height <- max(20, ceiling(lines/1.25))
-    
+
     # Create heading of the table
     jobtitle <- (x %>%
                    filter(Treatment_team == person) %>%
