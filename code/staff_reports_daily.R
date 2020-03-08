@@ -33,6 +33,7 @@ mr_data_discharged <- mr_data_discharged %>%
          ReSPECT = NA,
          Medications_reconciliation = NA,
          Allergies = NA,
+         Problem_list = NA,
          Summary = "Discharged")
 
 # There may be overlap in Patient_MRNs betwen admitted and discharged
