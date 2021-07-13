@@ -97,6 +97,13 @@ ggplot(mr_data_perday, aes(x = date, y = proportion, colour = indicator)) +
            y = 0.9,
            label = "Certificates commenced",
            angle = 90,
+           vjust = "bottom") +
+  geom_vline(xintercept = as.Date("2020-03-17")) +
+  annotate("text",
+           x = as.Date("2020-03-14"),
+           y = 0.9,
+           label = "Stopped (COVID-19)",
+           angle = 90,
            vjust = "bottom")
 graphics.off()
 
@@ -155,6 +162,13 @@ geom_vline(xintercept = as.Date("2020-02-17")) +
            y = 0.9,
            label = "Certificates commenced",
            angle = 90,
+           vjust = "bottom") +
+geom_vline(xintercept = as.Date("2020-03-17")) +
+annotate("text",
+           x = as.Date("2020-03-14"),
+           y = 0.9,
+           label = "Stopped (COVID-19)",
+           angle = 90,
            vjust = "bottom")
 graphics.off()
-
+  
