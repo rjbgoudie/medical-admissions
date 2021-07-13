@@ -17,6 +17,9 @@ output_folder_name <- "summary_graphs"
 # load ALL the CSV files
 filepaths_to_load <- filepaths_all(csv_directory = csv_directory)
 
+# Hack to remove post 2nd April 2020 (since 3rd April data file is empty)
+filepaths_to_load <- filepaths_to_load[1:699]
+
 # This takes some time, since loads hundreds of CSV files
 mr_data <- load_mr_data(filepaths_to_load)
 
@@ -42,6 +45,9 @@ mr_data_long <- mr_data %>%
 mr_data_perday <- mr_data_long %>%
   group_by(date, indicator) %>%
   summarise(proportion = mean(value, na.rm = TRUE))
+
+saveRDS(mr_data_perday,
+        file = file.path(output_folder_name, "mr_data_perday.rds"))
 
 # graph without raw data (only shows smoothed curve)
 
