@@ -15,7 +15,8 @@ source("code/functions.R")
 output_folder_name <- "summary_graphs"
 
 # load ALL the CSV files
-filepaths_to_load <- filepaths_all(csv_directory = csv_directory)
+filepaths_to_load <- filepaths_all(csv_directory = csv_directory,
+                                   type = "admitted")
 
 # Hack to remove post 2nd April 2020 (since 3rd April data file is empty)
 filepaths_to_load <- filepaths_to_load[1:699]
